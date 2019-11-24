@@ -10,18 +10,25 @@
         d3.csv("ranking.csv", function (data) {
             if (!(data["Country"] in count_countries)) {
                 count_countries[data["Country"]] = 1;
-                /*Object.keys(count_countries).forEach(function (key) {
-                document.writeln(key, count_countries[key]);
-            });*/
+                //console.log(count_countries);
             } else {
                 count_countries[data["Country"]]++;
             }
+            return count_countries;
         });
+
     </script>
 </head>
 
 <body>
     <script type="text/javascript">
+        
+        setTimeout(function () { //must use this because JS SUCKS
+            for(var key in count_countries){
+                document.writeln(key,"-",count_countries[key],"<br>");
+            }
+        }, 520);
+
         /*d3.json("world_countries.json")
             .then(draw)
             .catch( err => {console.log(err)});
