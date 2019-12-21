@@ -7,14 +7,13 @@
 
     <script>
         var count_countries = {}
+        var all_data= {}
+        var iter=0;
         d3.csv("ranking.csv", function (data) {
-            if (!(data["Country"] in count_countries)) {
-                count_countries[data["Country"]] = 1;
-                //console.log(count_countries);
-            } else {
-                count_countries[data["Country"]]++;
-            }
-            return count_countries;
+            
+            all_data[iter]=data;            
+            iter++;
+            return all_data;
         });
 
     </script>
@@ -24,10 +23,16 @@
     <script type="text/javascript">
         
         setTimeout(function () { //must use this because JS SUCKS
-            for(var key in count_countries){
-                document.writeln(key,"-",count_countries[key],"<br>");
+            //This loop iterates over the Map<Integer,Object>
+            for(var key in all_data){
+                for(var property in all_data[key]){
+                    document.writeln(all_data[key][property],'\t');
+                }
+                document.writeln('<br>');
+
+                break;
             }
-        }, 520);
+        }, 1750);
 
         /*d3.json("world_countries.json")
             .then(draw)
