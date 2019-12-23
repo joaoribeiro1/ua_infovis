@@ -4,13 +4,32 @@
 <head>
     <meta charset="utf-8">
     <script type="text/javascript" src="http://d3js.org/d3.v4.js"></script>
+    <style>
+        #filter {
+            visibility:  hidden;
+            position: absolute;
+            right: 350px;
+            top: 200px;
+            border: 2px solid black;
+        }
+    </style>
 </head>
 
 <body onload="loadData()">
     <!-- Add 2 buttons -->
     <button onclick="update(allData)">Impacto por área científica</button>
     <button onclick="update2(allData)">Top 5% publicações</button>
-    <div id="my_dataviz"></div>
+    <div id="datavis"></div>
+    <div id='filter'>
+        Country name:<input type='text' id='country' value="Portugal"><br>
+        <input type="radio" name='date' id='1' value='2010–2013'> 2010-2013<br>
+        <input type="radio" name='date' id='2' value='2011–2014'> 2011-2014<br>
+        <input type="radio" name='date' id='3' value='2012–2015'> 2012-2015<br>
+        <input type="radio" name='date' id='4' value='2013–2016'> 2013-2016<br>
+        <input type="radio" name='date' id='5' value='2014–2017' checked> 2014-2017<br>
+    </div>
+    
+
     <script type="text/javascript">
         /*
         Nome da universidade, País, Impacto do artigo, Área Científica
@@ -27,6 +46,15 @@
 
         */
         var allData=[]
+        var country= document.getElementById('country').value; 
+        var list=document.getElementsByName('date');
+        for(element in list){
+            if(list[element].checked){
+                var el=element;
+                break;
+            }
+        }
+        var period=document.getElementById(el).value;
 
         // set the dimensions and margins of the graph
         var margin = {top: 30, right: 30, bottom: 70, left: 60},
@@ -54,9 +82,24 @@
             return relevantData;
         }
 
+        function setFilters(){
+            var list=document.getElementsByName('date');
+            for(element in list){
+                if(list[element].checked){
+                    var el=parseInt(element)+1;
+                    break;
+                }
+            }
+            country= document.getElementById('country').value;
+            period=document.getElementById(el).value;
+            return [country,period];
+        }
+
         function update2(data){
             d3.selectAll('svg').remove();
-            var res=prepareData(data,'Portugal','2013–2016');
+            document.getElementById('filter').style.visibility='visible';
+            var l=setFilters();
+            var res=prepareData(data,l[0],l[1]);
             var dict={};
             for(val in res){
                 if(!(res[val].Field in dict)){
@@ -68,7 +111,7 @@
             console.log(dict);
 
             // append the svg object to the body of the page
-            var svg = d3.select("#my_dataviz")
+            var svg = d3.select("#datavis")
             .append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
@@ -88,8 +131,8 @@
                     .style("text-anchor", "end");
             // Add Y axis
             var y = d3.scaleLinear()
-                .domain([0, 5000])
-                .range([ height - 15, 0]);
+                .domain([0, Math.max(...Object.values(dict)) +100])
+                .range([ height -51, 0]);
             svg.append("g")
                 .call(d3.axisLeft(y));
 
@@ -99,20 +142,20 @@
                 .enter()
                 .append("rect")
                     .attr("x", function(d) { return x(d.Field); })
-                    .attr("y", function(d) { return y(d.P_top5); })
+                    .attr("y", function(d) { return y( d.P_top5); })
                     .attr("width", x.bandwidth())
                     .attr("height", function(d) { return height - y(0); })
                     .attr("fill", "#69b3a2"); 
             
             //Title of graph
             d3.select("svg").append("text")
-                .text("Top 5% Artigos - Portugal")
+                .text("Top 5% Artigos - "+l[0])
                 .attr("x", (width / 2) - 35)
                 .attr("y", height / 8)
                 .attr("fill", "black")
                 .style("font-weight","bold");
 
-            // labels
+            /*// labels
             svg.selectAll("text")
                 .data(res)
                 .enter()
@@ -128,7 +171,7 @@
                     })
                     .attr("fill","black")
                     .attr("text-anchor","middle");
-            
+            */
             //X axis legend
             d3.select("svg").append("text")
                 .text("Áreas Científicas")
@@ -139,8 +182,11 @@
         function update(data){
 
             d3.selectAll('svg').remove();
+            document.getElementById('filter').style.visibility='visible';
+            var l=setFilters();
+            var res=prepareData(data,l[0],l[1]);
             // append the svg object to the body of the page
-            var svg = d3.select("#my_dataviz")
+            var svg = d3.select("#datavis")
             .append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
@@ -149,7 +195,7 @@
                     "translate(" + margin.left + "," + margin.top + ")");
 
 
-            var res=prepareData(data,'Portugal','2013–2016');
+            var res=prepareData(data,country,period);
             var dict={};
             for(val in res){
                 if(!(res[val].Field in dict)){
@@ -161,7 +207,7 @@
             // X axis
             var x = d3.scaleBand()
                 .range([ 0, width ])
-                .domain(data.map(function(d) { return d.Field; }))
+                .domain(Object.keys(dict))
                 .padding(0.2);
             svg.append("g")
                 .attr("transform", "translate(0," + height + ")")
@@ -172,14 +218,14 @@
 
             // Add Y axis
             var y = d3.scaleLinear()
-                .domain([0, 80000])
-                .range([ height - 50, 0]);
+                .domain([0, Math.max(...Object.values(dict)) +100])
+                .range([ height, 0]);
             svg.append("g")
                 .call(d3.axisLeft(y)); 
             
             //Title of graph
             d3.select("svg").append("text")
-                .text("Impacto dos artigos - Portugal")
+                .text("Impacto dos artigos - "+l[0])
                 .attr("x", (width / 2) - 35)
                 .attr("y", height / 8)
                 .attr("fill", "black")
@@ -200,27 +246,8 @@
                     .attr("y", function(d) { return y(d.impact_P); })
                     .attr("width", x.bandwidth())
                     .attr("height", function(d) { return height - y(d.impact_P); })
-                    .attr("fill", "#69b3a2")
-                    // no bar at the beginning thus:
-                    //.attr("height", function(d) { return height - y(0); }) // always equal to 0
-                    //.attr("y", function(d) { return y(0); })
-
-        }
-        
-
-        /*
-        setTimeout(function () { //must use this because JS SUCKS
-            //This loop iterates over the Map<Integer,Object>
-            for(var key in all_data){
-                for(var property in all_data[key]){
-                    document.writeln(all_data[key][property],'\t');
-                }
-                document.writeln('<br>');
-
-                break;
-            }
-        }, 1750);*/
-
+                    .attr("fill", "#69b3a2");
+        }        
     </script>
 </body>
 
