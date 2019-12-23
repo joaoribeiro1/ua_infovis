@@ -3,25 +3,180 @@
 
 <head>
     <meta charset="utf-8">
-    <script type="text/javascript" src="http://d3js.org/d3.v5.js"></script>
-
-    <script>
-        var count_countries = {}
-        var all_data= {}
-        var iter=0;
-        d3.csv("ranking.csv", function (data) {
-            
-            all_data[iter]=data;            
-            iter++;
-            return all_data;
-        });
-
-    </script>
+    <script type="text/javascript" src="http://d3js.org/d3.v4.js"></script>
 </head>
 
-<body>
+<body onload="loadData()">
+    <!-- Add 2 buttons -->
+    <button onclick="update()">Impacto por área científica</button>
+    <button onclick="update2(allData)">Top 5% publicações</button>
+    <div id="my_dataviz"></div>
     <script type="text/javascript">
+        /*
+        Nome da universidade, País, Impacto do artigo, Área Científica
+        O número e a proporção de publicações de uma universidade que comparados
+        com outras publicações da mesma área científica e no mesmo ano, 
+        pertencem ao top 1%/10%/50% das publicações mais citadas.
+        */
+
+        //Fields: University, Country, Field, Period, impact_P, P_top1, P_top5, P_top10, P_top50
+
+        /*
+        Visualização por país/continente => Map Visualization
+        Visualização por área científica => Gráfico de barras
+        Visualização por top 1%/5%/10%/50% publicações mais citadas => Gráfico de barras
+
+        */
+        var allData=[]
+        function loadData(){
+            
+            d3.csv("ranking.csv", function(data){    
+                for(line in data){
+                    allData.push(data[line]);
+                }
+                return allData;    
+            });
+            return allData;
+        }
+
+        function prepareData(data,country,period){
+            var relevantData=[];
+            for(elem in data){ //–
+                if(data[elem].Country==country && data[elem].Period==period){
+                    relevantData.push(data[elem]);
+                }
+            }
+            return relevantData;
+        }
+
+        function update2(data){
+            var rel=prepareData(data,'Portugal','2013–2016');
+            var dict={};
+            for(val in rel){
+                if(!(rel[val].Field in dict)){
+                    dict[rel[val].Field]=parseInt(rel[val].P_top5);
+                }else{
+                    dict[rel[val].Field]+=parseInt(rel[val].P_top5);
+                }
+            }
+            console.log(dict);
+            var x = d3.scaleBand()
+                .range([0,width])
+                .domain(Object.keys(dict))
+                .padding(0.2);
+            svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                    .attr("transform", "translate(-10,0)rotate(-45)")
+                    .style("text-anchor", "end");
+            // Add Y axis
+            var y = d3.scaleLinear()
+                .domain([0, 5000])
+                .range([ height - 15, 0]);
+            svg.append("g")
+                .call(d3.axisLeft(y));
+
+            // Bars
+            svg.selectAll("mybar")
+                .data(rel)
+                .enter()
+                .append("rect")
+                    .attr("x", function(d) { return x(d.Field); })
+                    .attr("y", function(d) { return y(d.P_top5); })
+                    .attr("width", x.bandwidth())
+                    .attr("height", function(d) { return height - y(0); })
+                    .attr("fill", "#69b3a2"); 
+            
+
+            // labels
+            svg.selectAll("text")
+                .data(rel)
+                .enter()
+                .append("text")
+                    .text(function (d) {
+                        return d;
+                    })
+                    .attr("x", function (d, i) {
+                        return i * (width / rel.length) + (width / rel.length)/2;
+                    })
+                    .attr("y", function (d) {
+                        return height - (d * 4) + 15;
+                    })
+                    .attr("fill","white")
+                    .attr("text-anchor","middle");
+        }
+
+        // set the dimensions and margins of the graph
+        var margin = {top: 30, right: 30, bottom: 70, left: 60},
+            width = 560 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+
+
+        // append the svg object to the body of the page
+        var svg = d3.select("#my_dataviz")
+        .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+            .attr("transform",
+                "translate(" + margin.left + "," + margin.top + ")");
         
+        function update(){
+            d3.csv("ranking.csv", function (data) {
+            // X axis
+                var x = d3.scaleBand()
+                    .range([ 0, width ])
+                    .domain(data.map(function(d) { 
+                        if (d.Country== 'Portugal') return d.Field; }))
+                    .padding(0.2);
+                svg.append("g")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                        .attr("transform", "translate(-10,0)rotate(-45)")
+                        .style("text-anchor", "end");
+
+                // Add Y axis
+                var y = d3.scaleLinear()
+                    .domain([0, 80000])
+                    .range([ height - 50, 0]);
+                svg.append("g")
+                    .call(d3.axisLeft(y)); 
+                
+                //Title of graph
+                d3.select("svg").append("text")
+                    .text("Impacto dos artigos - Portugal")
+                    .attr("x", (width / 2) - 35)
+                    .attr("y", height / 8)
+                    .attr("fill", "black")
+                    .style("font-weight","bold");
+                
+                //X axis legend
+                d3.select("svg").append("text")
+                    .text("Áreas Científicas")
+                    .attr("x", 200)
+                    .attr("y", 0);
+
+                // Bars
+                svg.selectAll("mybar")
+                    .data(data)
+                    .enter()
+                    .append("rect")
+                        .attr("x", function(d) { if (d.Country== 'Portugal') return x(d.Field); })
+                        .attr("y", function(d) { if (d.Country== 'Portugal') return y(d.impact_P); })
+                        .attr("width", x.bandwidth())
+                        .attr("height", function(d) { return height - y(d.impact_P); })
+                        .attr("fill", "#69b3a2")
+                        // no bar at the beginning thus:
+                        //.attr("height", function(d) { return height - y(0); }) // always equal to 0
+                        //.attr("y", function(d) { return y(0); })
+
+            });
+        }
+        
+
+        /*
         setTimeout(function () { //must use this because JS SUCKS
             //This loop iterates over the Map<Integer,Object>
             for(var key in all_data){
@@ -32,12 +187,8 @@
 
                 break;
             }
-        }, 1750);
+        }, 1750);*/
 
-        /*d3.json("world_countries.json")
-            .then(draw)
-            .catch( err => {console.log(err)});
-        */
     </script>
 </body>
 
